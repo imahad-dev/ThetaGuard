@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThetaGuard — Systematic Options Overlay Status Console</title>
+  <link rel="icon" type="image/jpeg" href="/assets/logo.jpg">
+  <link rel="stylesheet" href="/style.css">
+  <!-- Chart.js CDN for lightweight responsive charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="brand-group">
+          <img src="/assets/logo.jpg" alt="ThetaGuard Logo" class="brand-logo">
+          <div class="brand-text">
+            <h1>ThetaGuard</h1>
+            <p class="subtitle">Systematic Defined-Risk Options Overlay Agent (SPY & QQQ Paper Trading)</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="badge-data-source" class="badge badge-source">Connecting...</div>
+        <div id="badge-account-id" class="badge badge-neutral">ACCT: --</div>
+        <div id="badge-mode" class="badge badge-mode">READ-ONLY MODE</div>
+        <div id="badge-lockout" class="badge badge-clear">MACRO CLEAR</div>
+      </div>
+    </header>
+
+    <!-- Key Metrics Strip -->
+    <section class="metrics-grid">
+      <div class="card">
+        <div class="card-label">Account Equity</div>
+        <div id="val-equity" class="card-value">$100,000.00</div>
+        <div class="card-sub" id="val-equity-sub">Alpaca Paper Account</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Available Cash</div>
+        <div id="val-cash" class="card-value">$100,000.00</div>
+        <div class="card-sub" id="val-buying-power">BP: $100,000.00</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Running Realized P&L</div>
+        <div id="val-pnl" class="card-value text-green">+$0.00</div>
+        <div class="card-sub" id="val-pnl-sub">0 closed trades</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Capital at Risk</div>
+        <div id="val-risk" class="card-value">$0.00</div>
+        <div class="card-sub" id="val-risk-cap">0.00% / 5.0% Portfolio Ceiling</div>
+      </div>
+    </section>
+
+    <!-- Analytics Charts Strip -->
+    <section class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📈 Cumulative Realized P&L ($)</h3>
+          <span class="chart-subtitle">Progression across closed put credit spreads</span>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-pnl"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>📊 Realized Volatility Regime & Entry Floor</h3>
+          <span class="chart-subtitle">52-Week Rank vs 30.0 Strategy Threshold</span>
+        </div>
+        <div class="chart-canvas-wrapper">
+          <canvas id="chart-vol"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Macro Event Lockout Horizons -->
+    <section class="section">
+      <div class="section-header">
+        <h2>📅 High-Impact Macro Lockout Horizons</h2>
+        <span id="lockout-status-summary" class="status-indicator">All Event Clear</span>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Event Name</th>
+              <th>Release Time (ET)</th>
+              <th>Lockout Window</th>
+              <th>Hours to Release</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="macro-calendar-tbody">
+            <tr><td colspan="5" class="text-center">Loading macro calendar...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Active Positions -->
+    <section class="section">
+      <div class="section-header">
+        <h2>📊 Active Defined-Risk Put Credit Spreads</h2>
+        <span id="active-spreads-count" class="badge badge-neutral">0 / 2 Active</span>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Ticker</th>
+              <th>Short Strike (Delta)</th>
+              <th>Long Strike</th>
+              <th>Expiration</th>
+              <th>Entry Credit</th>
+              <th>Max Profit</th>
+              <th>Max Loss</th>
+              <th>Take-Profit (50%)</th>
+              <th>Stop-Loss (200%)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="positions-tbody">
+            <tr><td colspan="11" class="text-center">No active open positions. Macro safeguards active.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Trade Audit History -->
+    <section class="section">
+      <div class="section-header">
+        <h2>📜 Trade Audit History & Closed P&L</h2>
+        <span id="total-trades-count" class="badge badge-neutral">0 Trades</span>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Trade ID</th>
+              <th>Timestamp</th>
+              <th>Ticker</th>
+              <th>Decision Action</th>
+              <th>Executed Credit</th>
+              <th>Realized P&L</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="trades-tbody">
+            <tr><td colspan="7" class="text-center">No trade history recorded yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div>ThetaGuard Agent • Systematic Options Overlay • Alpaca Trading API</div>
+      <div id="last-updated">Last Updated: --</div>
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
