@@ -21,14 +21,16 @@
 
 body {
   background-color: var(--bg-color);
-  background-image: linear-gradient(rgba(13, 17, 23, 0.88), rgba(13, 17, 23, 0.94)), url("/assets/bg.jpg");
+  background-image: linear-gradient(rgba(13, 17, 23, 0.72), rgba(13, 17, 23, 0.85)), url("/assets/bg.jpg");
   background-size: cover;
+  background-repeat: no-repeat;
   background-attachment: fixed;
-  background-position: center;
+  background-position: center top;
   color: var(--text-main);
   font-family: var(--font-family);
   line-height: 1.5;
   padding: 24px;
+  min-height: 100vh;
 }
 
 .container {
@@ -53,12 +55,13 @@ body {
 }
 
 .brand-logo {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1.5px solid #30363d;
   object-fit: cover;
-  box-shadow: 0 0 14px rgba(63, 185, 80, 0.25);
+  display: block;
+  box-shadow: 0 0 16px rgba(63, 185, 80, 0.35);
 }
 
 .brand-text h1 {

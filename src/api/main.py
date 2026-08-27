@@ -62,6 +62,18 @@ def serve_js():
     return FileResponse(js_path, media_type="application/javascript")
 
 
+@app.get("/assets/logo.jpg")
+def serve_logo():
+    logo_path = os.path.join(static_dir, "assets", "logo.jpg")
+    return FileResponse(logo_path, media_type="image/jpeg")
+
+
+@app.get("/assets/bg.jpg")
+def serve_bg():
+    bg_path = os.path.join(static_dir, "assets", "bg.jpg")
+    return FileResponse(bg_path, media_type="image/jpeg")
+
+
 assets_dir = os.path.join(static_dir, "assets")
 if os.path.exists(assets_dir):
     app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
