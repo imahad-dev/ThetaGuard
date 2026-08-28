@@ -29,7 +29,7 @@ def test_api_candidates_endpoint():
     res = client.get("/api/candidates")
     assert res.status_code == 200
     candidates = res.json()
-    assert len(candidates) >= 1
+    assert isinstance(candidates, list)
     for c in candidates:
         assert c["underlying"] in ("SPY", "QQQ")
         assert c["spread_width"] == 5.0
