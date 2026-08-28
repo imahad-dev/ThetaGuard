@@ -31,8 +31,18 @@ class PreTradeRiskGate:
         active_spreads: List[ActiveSpread],
         equity: float,
         market_iv_ranks: Dict[str, float],
+        positions_to_close: Optional[List[Dict[str, Any]]] = None,
     ) -> tuple[List[PutCreditSpread], List[Dict[str, Any]], List[TradeReasoning], RiskSnapshot]:
-        open_spreads = [s for s in active_spreads if s.status == "OPEN"]
+        closing_ids = set()
+        if positions_to_close:
+            for p in positions_to_close:
+                item = p.get("spread_item")
+                if hasattr(item, "id"):
+                    closing_ids.add(item.id)
+                elif isinstance(item, dict) and "id" in item:
+                    closing_ids.add(item["id"])
+
+        open_spreads = [s for s in active_spreads if s.status == "OPEN" and s.id not in closing_ids]
         current_active_risk = sum(s.spread.max_loss for s in open_spreads)
         current_risk_pct = (current_active_risk / equity) if equity > 0 else 0.0
 
@@ -296,6 +306,7 @@ class RiskManagerAgent:
             active_spreads=state.active_spreads,
             equity=equity,
             market_iv_ranks=state.market_iv_ranks,
+            positions_to_close=state.positions_to_close,
         )
 
         state.approved_spreads_to_open = approved

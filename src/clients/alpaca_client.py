@@ -444,6 +444,8 @@ class AlpacaOptionsClient:
             # 1. Cancel resting Take-Profit GTC order if active to prevent race condition
             if tp_order_id:
                 try:
+                    # Validate UUID format before calling broker API to prevent errors on mock/legacy IDs
+                    uuid.UUID(str(tp_order_id))
                     tp_order = self.trading_client.get_order_by_id(tp_order_id)
                     tp_status = str(getattr(tp_order, "status", "")).lower()
                     if "filled" in tp_status:
@@ -452,20 +454,28 @@ class AlpacaOptionsClient:
                     else:
                         self.trading_client.cancel_order_by_id(tp_order_id)
                         log.info(f"[EXIT SYNC] Successfully cancelled resting TP order {tp_order_id}.")
+                except ValueError:
+                    log.debug(f"[EXIT SYNC] Skipping cancel on non-UUID order ID: {tp_order_id}")
                 except Exception as e:
                     log.warning(f"[EXIT SYNC] TP order {tp_order_id} cancel check notice: {e}")
 
             # If the TP order already closed the short position, we only need to close the long leg if held
             if not tp_already_filled:
                 # Buy to close short leg
-                close_short = MarketOrderRequest(
-                    symbol=spread.short_leg.option_symbol,
-                    qty=spread.quantity,
-                    side=OrderSide.BUY,
-                    time_in_force=TimeInForce.DAY,
-                )
-                self.trading_client.submit_order(close_short)
-                log.info(f"[EXIT] Submitted Buy-To-Close for short leg {spread.short_leg.option_symbol}")
+                try:
+                    close_short = MarketOrderRequest(
+                        symbol=spread.short_leg.option_symbol,
+                        qty=spread.quantity,
+                        side=OrderSide.BUY,
+                        time_in_force=TimeInForce.DAY,
+                    )
+                    self.trading_client.submit_order(close_short)
+                    log.info(f"[EXIT] Submitted Buy-To-Close for short leg {spread.short_leg.option_symbol}")
+                except Exception as e:
+                    if "not found" in str(e).lower() or "expired" in str(e).lower() or "not tradeable" in str(e).lower():
+                        log.warning(f"[EXIT NOTICE] Short leg {spread.short_leg.option_symbol} no longer tradeable on broker ({e}).")
+                    else:
+                        raise
 
             # Sell to close long leg (salvage residual value)
             try:
@@ -478,7 +488,7 @@ class AlpacaOptionsClient:
                 self.trading_client.submit_order(close_long)
                 log.info(f"[EXIT] Submitted Sell-To-Close for long leg {spread.long_leg.option_symbol}")
             except Exception as e:
-                log.warning(f"[EXIT] Long leg close notice for {spread.long_leg.option_symbol}: {e}")
+                log.warning(f"[EXIT NOTICE] Long leg {spread.long_leg.option_symbol} closure notice (worthless/unfilled): {e}")
 
             return {
                 "status": "CLOSED",
@@ -487,6 +497,9 @@ class AlpacaOptionsClient:
                 "tp_cancelled": bool(tp_order_id and not tp_already_filled),
             }
         except Exception as e:
+            if "not found" in str(e).lower() or "expired" in str(e).lower() or "not tradeable" in str(e).lower():
+                log.warning(f"[EXIT RECOVERY] Contract no longer tradeable on broker ({e}). Settling as closed.")
+                return {"status": "CLOSED", "reason": reason, "broker_expired": True}
             log.error(f"Failed to close spread legs: {e}")
             raise
 

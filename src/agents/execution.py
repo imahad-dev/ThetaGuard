@@ -37,6 +37,68 @@ class ExecutionAgent:
             reason: str = exit_order["reason"]
 
             log.info(f"[EXECUTION EXIT] Processing {action.value} for {spread_item.underlying}...")
+
+            # CRITICAL (Addendum 12): Expiration Settlement is PURE BOOKKEEPING only.
+            # An expired option is no longer tradeable on exchange. Never submit broker market/close orders for expired contracts.
+            if action in (DecisionAction.EXPIRED_MAX_PROFIT, DecisionAction.EXPIRED):
+                try:
+                    # Attempt to cancel any resting GTC TP order if present (safe check)
+                    if spread_item.tp_order_id:
+                        try:
+                            uuid.UUID(str(spread_item.tp_order_id))
+                            self.alpaca_client.trading_client.cancel_order_by_id(spread_item.tp_order_id)
+                            log.info(f"[EXPIRATION SYNC] Cancelled resting TP order {spread_item.tp_order_id}.")
+                        except ValueError:
+                            log.debug(f"[EXPIRATION SYNC] Skipping non-UUID order ID: {spread_item.tp_order_id}")
+                        except Exception as tp_err:
+                            log.debug(f"[EXPIRATION SYNC] TP order cancel notice (ignored for expired contract): {tp_err}")
+
+                    spread_item.status = "CLOSED"
+                    spread_item.closed_at = datetime.now(timezone.utc)
+                    spread_item.close_reason = reason
+                    spread_item.realized_pl = round(spread_item.spread.max_profit, 2)
+
+                    # Ensure referenced objects in state.active_spreads reflect CLOSED status
+                    for s in state.active_spreads:
+                        if s.id == spread_item.id:
+                            s.status = "CLOSED"
+                            s.closed_at = spread_item.closed_at
+                            s.close_reason = reason
+                            s.realized_pl = spread_item.realized_pl
+
+                    audit_log = TradeAuditLog(
+                        trade_id=f"expire_{spread_item.id}",
+                        action=action,
+                        underlying=spread_item.underlying,
+                        reasoning=next(
+                            (r for r in state.reasoning_logs if r.underlying == spread_item.underlying),
+                            state.reasoning_logs[0] if state.reasoning_logs else None,
+                        ),
+                        spread=spread_item.spread,
+                        execution_status="EXPIRED_WORTHLESS",
+                        realized_pnl=spread_item.realized_pl,
+                        is_paper_trading=True,
+                    )
+                    state.executed_trades.append(audit_log)
+                    log.info(
+                        f"[EXPIRATION SETTLEMENT SUCCESS] Pure bookkeeping settlement for {spread_item.underlying} spread "
+                        f"(Exp: {spread_item.spread.expiration_date}). Realized PnL: +${spread_item.realized_pl:.2f} (100% max profit)."
+                    )
+                except Exception as e:
+                    log.error(f"[EXPIRATION SETTLEMENT ERROR] Error during bookkeeping settlement: {e}")
+                    spread_item.status = "CLOSED"
+                    spread_item.closed_at = datetime.now(timezone.utc)
+                    spread_item.close_reason = reason
+                    spread_item.realized_pl = round(spread_item.spread.max_profit, 2)
+                    for s in state.active_spreads:
+                        if s.id == spread_item.id:
+                            s.status = "CLOSED"
+                            s.closed_at = spread_item.closed_at
+                            s.close_reason = reason
+                            s.realized_pl = spread_item.realized_pl
+                continue
+
+            # Standard Live Market Exits (Take-Profit, Stop-Loss, Time-Stop)
             try:
                 receipt = self.alpaca_client.close_spread_position(
                     spread_item.spread,
@@ -52,8 +114,6 @@ class ExecutionAgent:
                     spread_item.realized_pl = round(spread_item.spread.max_profit * 0.50, 2)
                 elif action == DecisionAction.STOP_LOSS:
                     spread_item.realized_pl = -round(spread_item.spread.max_profit * 2.00, 2)
-                elif action == DecisionAction.EXPIRED_MAX_PROFIT:
-                    spread_item.realized_pl = round(spread_item.spread.max_profit, 2)
                 else:
                     spread_item.realized_pl = round(spread_item.spread.max_profit * 0.20, 2)
 
@@ -83,7 +143,20 @@ class ExecutionAgent:
             except Exception as e:
                 err_msg = f"Failed to close spread {spread_item.underlying}: {e}"
                 log.error(f"[EXECUTION ERROR] {err_msg}")
-                state.execution_errors.append(err_msg)
+                if "not found" in str(e).lower() or "expired" in str(e).lower() or "not tradeable" in str(e).lower():
+                    log.warning(f"[RECOVERY] Contract {spread_item.underlying} no longer tradeable on broker. Settling as closed.")
+                    spread_item.status = "CLOSED"
+                    spread_item.closed_at = datetime.now(timezone.utc)
+                    spread_item.close_reason = "EXPIRED_ON_BROKER"
+                    spread_item.realized_pl = round(spread_item.spread.max_profit, 2)
+                    for s in state.active_spreads:
+                        if s.id == spread_item.id:
+                            s.status = "CLOSED"
+                            s.closed_at = spread_item.closed_at
+                            s.close_reason = "EXPIRED_ON_BROKER"
+                            s.realized_pl = spread_item.realized_pl
+                else:
+                    state.execution_errors.append(err_msg)
 
         # 2. Execute Approved New Spreads
         for spread in state.approved_spreads_to_open:

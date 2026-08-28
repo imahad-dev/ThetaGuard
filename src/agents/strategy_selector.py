@@ -39,10 +39,25 @@ class StrategySelectorAgent:
         state.evaluated_tickers = list(self.settings.allowed_universe)
         state.candidate_spreads = []
 
-        # Find existing active tickers to avoid duplicate spreads on the same ticker
-        existing_underlyings = {
-            s.underlying for s in state.active_spreads if s.status == "OPEN"
-        }
+        # Find existing active tickers to avoid duplicate spreads on the same ticker (excluding matured/expired positions)
+        eval_dt = state.timestamp or datetime.now(timezone.utc)
+        if eval_dt.tzinfo is None:
+            eval_dt = eval_dt.replace(tzinfo=timezone.utc)
+        current_et = eval_dt.astimezone(ET_TZ)
+
+        existing_underlyings = set()
+        for s in state.active_spreads:
+            if s.status == "OPEN":
+                expiry_1600 = datetime(
+                    s.spread.expiration_date.year,
+                    s.spread.expiration_date.month,
+                    s.spread.expiration_date.day,
+                    16,
+                    0,
+                    tzinfo=ET_TZ,
+                )
+                if current_et < expiry_1600:
+                    existing_underlyings.add(s.underlying)
 
         for symbol in state.evaluated_tickers:
             if symbol in existing_underlyings:

@@ -177,7 +177,7 @@ def run_social_command(engine: ThetaGuardEngine):
 
 def main():
     parser = argparse.ArgumentParser(description="ThetaGuard CLI Runner")
-    parser.add_argument("command", nargs="?", default="cycle", choices=["cycle", "status", "social", "daemon"])
+    parser.add_argument("command", nargs="?", default="cycle", choices=["cycle", "status", "social", "daemon", "clear-state"])
     parser.add_argument("--interval", type=int, default=5, help="Daemon baseline interval in minutes (default: 5)")
     parser.add_argument("--json", action="store_true", help="Output raw JSON format for cron parsing")
     parser.add_argument("--dry-run", action="store_true", help="Run in mock/dry-run simulation mode")
@@ -190,6 +190,11 @@ def main():
 
     client = AlpacaOptionsClient()
     engine = ThetaGuardEngine(client)
+
+    if args.command == "clear-state":
+        engine.state_store.clear()
+        console.print("[bold green]ThetaGuard on-disk state cleared successfully. Fresh slate ready for live kickoff.[/bold green]")
+        return
 
     if args.command == "cycle":
         run_cycle_command(engine, as_json=args.json)

@@ -18,6 +18,8 @@ class DecisionAction(str, Enum):
     TIME_STOP_EVENT = "TIME_STOP_EVENT"
     TIME_STOP_BUILD_WINDOW_END = "TIME_STOP_BUILD_WINDOW_END"
     EXPIRED_MAX_PROFIT = "EXPIRED_MAX_PROFIT"
+    EXPIRED_WORTHLESS = "EXPIRED_WORTHLESS"
+    EXPIRED = "EXPIRED"
     HOLD = "HOLD"
 
 
@@ -49,7 +51,7 @@ class TradeAuditLog(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     action: DecisionAction
     underlying: str
-    reasoning: TradeReasoning
+    reasoning: Optional[TradeReasoning] = None
     spread: Optional[PutCreditSpread] = None
     order_ids: List[str] = Field(default_factory=list)
     execution_status: str = Field(default="PENDING")
