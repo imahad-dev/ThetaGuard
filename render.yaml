@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: thetaguard-console
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PUBLIC_READ_ONLY_MODE
+        value: "true"
+      - key: ALPACA_PAPER_TRADE
+        value: "true"
+      - key: ALPACA_API_KEY
+        sync: false
+      - key: ALPACA_SECRET_KEY
+        sync: false
+      - key: X_ADMIN_KEY
+        sync: false

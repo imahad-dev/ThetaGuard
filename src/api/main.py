@@ -3,7 +3,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from config.settings import get_settings
@@ -16,8 +16,9 @@ static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    port = int(os.getenv("PORT", settings.app_port))
     log.info(
-        f"ThetaGuard Server Started on http://{settings.app_host}:{settings.app_port} "
+        f"ThetaGuard Server Started on http://{settings.app_host}:{port} "
         f"[Paper Trading: {settings.alpaca_paper_trade}]"
     )
     yield
@@ -30,7 +31,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware for development flexibility
+# CORS middleware for development and external embedding flexibility
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,7 +40,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API router (/api/status, /api/positions, /api/risk, etc.)
+# Health check for cloud deployment platforms (Railway, Render, Fly.io, Cloud Run)
+@app.get("/health")
+def health_check():
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "service": "ThetaGuard Options Overlay Agent",
+            "read_only": settings.public_read_only_mode,
+        }
+    )
+
+
+# Include API router (/api/status, /api/positions, /api/risk, /api/volatility-history, etc.)
 app.include_router(router)
 
 
@@ -47,31 +60,31 @@ app.include_router(router)
 @app.get("/")
 def serve_index():
     index_path = os.path.join(static_dir, "index.html")
-    return FileResponse(index_path)
+    return FileResponse(index_path, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/style.css")
 def serve_css():
     css_path = os.path.join(static_dir, "style.css")
-    return FileResponse(css_path, media_type="text/css")
+    return FileResponse(css_path, media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/app.js")
 def serve_js():
     js_path = os.path.join(static_dir, "app.js")
-    return FileResponse(js_path, media_type="application/javascript")
+    return FileResponse(js_path, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/assets/logo.jpg")
 def serve_logo():
     logo_path = os.path.join(static_dir, "assets", "logo.jpg")
-    return FileResponse(logo_path, media_type="image/jpeg")
+    return FileResponse(logo_path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/assets/bg.jpg")
 def serve_bg():
     bg_path = os.path.join(static_dir, "assets", "bg.jpg")
-    return FileResponse(bg_path, media_type="image/jpeg")
+    return FileResponse(bg_path, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 
 assets_dir = os.path.join(static_dir, "assets")
@@ -84,4 +97,5 @@ if os.path.exists(static_dir):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("src.api.main:app", host=settings.app_host, port=settings.app_port, reload=True)
+    port = int(os.getenv("PORT", settings.app_port))
+    uvicorn.run("src.api.main:app", host=settings.app_host, port=port, reload=False)
