@@ -116,6 +116,12 @@ class Settings(BaseSettings):
         validation_alias="ADMIN_API_KEY",
         description="Secret key required to trigger manual debug cycles when in public mode.",
     )
+    enable_trading_daemon: bool = Field(
+        default=True,
+        validation_alias="ENABLE_TRADING_DAEMON",
+        description="When True, the FastAPI process embeds an asyncio background task running the "
+        "trading cycle loop. Set False when running a separate CLI daemon to avoid duplicate orders.",
+    )
     mock_alpaca: bool = Field(
         default=False,
         validation_alias="MOCK_ALPACA",

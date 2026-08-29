@@ -10,6 +10,8 @@ services:
         value: "true"
       - key: ALPACA_PAPER_TRADE
         value: "true"
+      - key: ENABLE_TRADING_DAEMON
+        value: "true"
       - key: ALPACA_API_KEY
         sync: false
       - key: ALPACA_SECRET_KEY
