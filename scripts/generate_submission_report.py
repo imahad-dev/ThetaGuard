@@ -24,7 +24,7 @@ def compile_dynamic_report(state_store: StateStore, force_template: bool = False
     """Dynamically compiles real audit logs from StateStore or renders pre-kickoff template."""
     active_spreads, execution_history, volatility_history, metadata = state_store.load_state()
 
-    closed_trades = [t for t in execution_history if t.execution_status == "CLOSED" and t.realized_pnl is not None]
+    closed_trades = [t for t in execution_history if t.realized_pnl is not None]
     is_live_data = len(closed_trades) > 0 and not force_template
 
     if is_live_data:

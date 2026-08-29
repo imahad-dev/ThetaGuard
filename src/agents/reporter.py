@@ -29,7 +29,7 @@ class ReporterAgent:
         ]
         closed_today = [
             t for t in state.executed_trades
-            if t.action in (DecisionAction.TAKE_PROFIT, DecisionAction.STOP_LOSS, DecisionAction.TIME_STOP_EVENT)
+            if t.realized_pnl is not None
         ]
         
         realized_pnl_today = sum(t.realized_pnl or 0.0 for t in closed_today)

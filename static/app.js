@@ -241,24 +241,28 @@ async function updateDashboard() {
   }
 
   // 4. Fetch Trade History & Running P&L
+  // Filter all closed positions with realized PnL regardless of exit reason
   const trades = await fetchJSON("/api/trades");
   const tradesTbody = document.getElementById("trades-tbody");
   const totalTradesBadge = document.getElementById("total-trades-count");
   if (trades && trades.length > 0) {
-    const closedTrades = trades.filter(t => t.execution_status === "CLOSED" && t.realized_pnl !== null);
-    const totalPnl = closedTrades.reduce((acc, t) => acc + (t.realized_pnl || 0), 0);
+    const closedTrades = trades.filter(t => t.realized_pnl !== null && t.realized_pnl !== undefined);
+    const sortedClosedTrades = [...closedTrades].sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+    const totalPnl = sortedClosedTrades.reduce((acc, t) => acc + (t.realized_pnl || 0), 0);
     
     const pnlEl = document.getElementById("val-pnl");
     pnlEl.textContent = (totalPnl >= 0 ? "+" : "-") + formatCurrency(Math.abs(totalPnl));
     pnlEl.className = totalPnl >= 0 ? "card-value text-green" : "card-value text-red";
-    document.getElementById("val-pnl-sub").textContent = `${closedTrades.length} closed trades (${trades.length} total events)`;
+    document.getElementById("val-pnl-sub").textContent = `${sortedClosedTrades.length} closed trades (${trades.length} total events)`;
 
     totalTradesBadge.textContent = `${trades.length} Records`;
     tradesTbody.innerHTML = trades.slice(-10).reverse().map(t => {
-      const pnlStr = t.realized_pnl !== null && t.realized_pnl !== undefined
+      const isClosed = t.realized_pnl !== null && t.realized_pnl !== undefined;
+      const pnlStr = isClosed
         ? `<strong class="${t.realized_pnl >= 0 ? 'text-green' : 'text-red'}">${t.realized_pnl >= 0 ? '+' : '-'}$${Math.abs(t.realized_pnl).toFixed(2)}</strong>`
         : '-';
       const creditStr = t.net_credit_executed ? `$${t.net_credit_executed.toFixed(2)}` : '-';
+      const isSuccessStatus = t.execution_status === 'CLOSED' || t.execution_status === 'EXPIRED_WORTHLESS' || t.execution_status === 'FILLED';
       return `
         <tr>
           <td><code>${t.trade_id}</code></td>
@@ -267,17 +271,17 @@ async function updateDashboard() {
           <td><code>${t.action}</code></td>
           <td>${creditStr}</td>
           <td>${pnlStr}</td>
-          <td><span class="badge ${t.execution_status === 'CLOSED' ? 'badge-clear' : 'badge-neutral'}">${t.execution_status}</span></td>
+          <td><span class="badge ${isSuccessStatus ? 'badge-clear' : 'badge-neutral'}">${t.execution_status}</span></td>
         </tr>
       `;
     }).join("");
 
-    // Update P&L Chart
+    // Update P&L Chart with strictly chronological points
     if (pnlChart) {
       const pnlLabels = ["Kickoff"];
       const pnlData = [0];
       let cumPnl = 0;
-      closedTrades.forEach((t, idx) => {
+      sortedClosedTrades.forEach((t, idx) => {
         cumPnl += (t.realized_pnl || 0);
         const timeStr = t.timestamp ? new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `T${idx+1}`;
         pnlLabels.push(timeStr);
@@ -294,15 +298,18 @@ async function updateDashboard() {
     tradesTbody.innerHTML = `<tr><td colspan="7" class="text-center">No completed trades recorded yet.</td></tr>`;
   }
 
-  // 5. Fetch Volatility History Time Series (recent rolling window for live display)
+  // 5. Fetch Volatility History Time Series (recent rolling window sorted strictly chronologically)
   const volHistory = await fetchJSON("/api/volatility-history?limit=100");
   if (volHistory && volHistory.length > 0 && volChart) {
+    // Sort chronologically ascending by timestamp before charting
+    const sortedVolHistory = [...volHistory].sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+
     const volLabels = [];
     const spyData = [];
     const qqqData = [];
     const thresholdData = [];
 
-    volHistory.forEach(v => {
+    sortedVolHistory.forEach(v => {
       const tStr = v.timestamp ? new Date(v.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--';
       volLabels.push(tStr);
       spyData.push(v.spy_vol_rank);

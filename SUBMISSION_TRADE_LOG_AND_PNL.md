@@ -1,7 +1,7 @@
 # 🛡️ ThetaGuard — Final Submission Trade Log & P&L Report
 > [!NOTE]
 > **LIVE DATA STATUS: EMPIRICAL PAPER TRADING AUDIT**  
-> Generated dynamically from on-disk `StateStore` records (`data/thetaguard_state.json`) containing 2 completed trades.
+> Generated dynamically from on-disk `StateStore` records (`data/thetaguard_state.json`) containing 4 completed trades.
 
 **Hackathon:** Alpaca AI Trading Agents Hackathon (lablab.ai x Alpaca)  
 **Track:** Income & Portfolio Overlay Agents  
@@ -15,11 +15,11 @@
 ## 1. Executive Summary & Strategy Highlights
 
 * **Initial Account Equity:** `$100,000.00`
-* **Ending Account Equity:** `$100,000.00`
-* **Total Net Realized P&L:** `+$83.00` (`+0.000%` over build window)
-* **Total Closed Spreads:** `2`
-* **Win Rate:** `100.0%` (2 wins / 0 losses)
-* **Active Open Spreads:** `2`
+* **Ending Account Equity:** `$99,997.90`
+* **Total Net Realized P&L:** `+$164.00` (`+-0.002%` over build window)
+* **Total Closed Spreads:** `4`
+* **Win Rate:** `100.0%` (4 wins / 0 losses)
+* **Active Open Spreads:** `0`
 * **Macro Blackout Adherence:** `100%` (Zero positions held across macro releases)
 
 ---
@@ -30,6 +30,8 @@
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `exit_thetaguard_spy_98d09b70` | 2026-08-25 20:57 | SPY | $556.0 / $551.0 | 2026-08-26 | `EXPIRED_MAX_PROFIT` | - | **+$45.00** | CLOSED |
 | `exit_thetaguard_qqq_a3177255` | 2026-08-25 20:57 | QQQ | $475.0 / $470.0 | 2026-08-26 | `EXPIRED_MAX_PROFIT` | - | **+$38.00** | CLOSED |
+| `expire_thetaguard_spy_8f7737e7` | 2026-08-28 19:37 | SPY | $556.0 / $551.0 | 2026-08-26 | `EXPIRED_MAX_PROFIT` | - | **+$44.00** | EXPIRED_WORTHLESS |
+| `expire_thetaguard_qqq_2e52834a` | 2026-08-28 19:37 | QQQ | $475.0 / $470.0 | 2026-08-26 | `EXPIRED_MAX_PROFIT` | - | **+$37.00** | EXPIRED_WORTHLESS |
 
 ---
 
