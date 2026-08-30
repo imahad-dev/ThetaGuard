@@ -34,5 +34,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Start FastAPI application
-CMD ["sh", "-c", "exec uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start FastAPI application — uses Python's os.getenv("PORT") for platform-agnostic
+# port binding. Shell expansion (${PORT}) is unreliable on Railway/some container runtimes.
+CMD ["python", "-m", "src.api.main"]
