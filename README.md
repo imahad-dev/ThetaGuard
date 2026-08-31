@@ -1,4 +1,4 @@
-# 🛡️ ThetaGuard — Alpaca Income & Portfolio Overlay Agent
+# 🛡️ ThetaGuard | Alpaca Income & Portfolio Overlay Agent
 
 > **Alpaca AI Trading Agents Hackathon** (lablab.ai x Alpaca)  
 > **Track**: Income & Portfolio Overlay Agents  
