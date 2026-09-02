@@ -8,12 +8,13 @@ import numpy as np
 
 try:
     from alpaca.trading.client import TradingClient
-    from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
+    from alpaca.trading.enums import OrderSide, OrderType, TimeInForce, OrderClass, PositionIntent
     from alpaca.trading.requests import (
         GetOrdersRequest,
         LimitOrderRequest,
         MarketOrderRequest,
         TakeProfitRequest,
+        OptionLegRequest,
     )
     from alpaca.data.historical.option import OptionHistoricalDataClient
     from alpaca.data.requests import OptionChainRequest
@@ -376,27 +377,32 @@ class AlpacaOptionsClient:
             }
 
         try:
-            # Place Short Leg (Sell to Open)
-            short_req = LimitOrderRequest(
-                symbol=spread.short_leg.option_symbol,
+            # Submit BOTH legs as ONE combined multi-leg (mleg) order so Alpaca's
+            # margin engine recognizes the defined-risk pairing and only requires
+            # spread-width collateral -- not full cash-secured-put notional for
+            # the short leg evaluated on its own.
+            spread_req = LimitOrderRequest(
                 qty=spread.quantity,
-                side=OrderSide.SELL,
+                order_class=OrderClass.MLEG,
                 type=OrderType.LIMIT,
                 time_in_force=TimeInForce.DAY,
-                limit_price=spread.short_leg.bid,
+                limit_price=spread.net_credit_per_share,
+                legs=[
+                    OptionLegRequest(
+                        symbol=spread.short_leg.option_symbol,
+                        ratio_qty=1,
+                        side=OrderSide.SELL,
+                        position_intent=PositionIntent.SELL_TO_OPEN,
+                    ),
+                    OptionLegRequest(
+                        symbol=spread.long_leg.option_symbol,
+                        ratio_qty=1,
+                        side=OrderSide.BUY,
+                        position_intent=PositionIntent.BUY_TO_OPEN,
+                    ),
+                ],
             )
-            short_order = self.trading_client.submit_order(short_req)
-
-            # Place Long Leg (Buy to Open)
-            long_req = LimitOrderRequest(
-                symbol=spread.long_leg.option_symbol,
-                qty=spread.quantity,
-                side=OrderSide.BUY,
-                type=OrderType.LIMIT,
-                time_in_force=TimeInForce.DAY,
-                limit_price=spread.long_leg.ask,
-            )
-            long_order = self.trading_client.submit_order(long_req)
+            spread_order = self.trading_client.submit_order(spread_req)
 
             # Submit resting GTC take-profit limit buy order for the short leg
             tp_req = LimitOrderRequest(
@@ -409,9 +415,13 @@ class AlpacaOptionsClient:
             )
             tp_order = self.trading_client.submit_order(tp_req)
 
+            # Both legs now live under a single combined mleg order -- keep the
+            # existing two-key shape (short_order_id/long_order_id) so
+            # execution.py and TradeAuditLog don't need to change, but point
+            # both at the one real order id that now exists.
             return {
-                "short_order_id": str(short_order.id),
-                "long_order_id": str(long_order.id),
+                "short_order_id": str(spread_order.id),
+                "long_order_id": str(spread_order.id),
                 "tp_order_id": str(tp_order.id),
                 "status": "SUBMITTED",
             }
@@ -502,4 +512,3 @@ class AlpacaOptionsClient:
                 return {"status": "CLOSED", "reason": reason, "broker_expired": True}
             log.error(f"Failed to close spread legs: {e}")
             raise
-
