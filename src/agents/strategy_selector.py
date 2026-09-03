@@ -140,7 +140,7 @@ class StrategySelectorAgent:
 
         # Enumerate dynamic Mon/Wed/Fri expiries within 1 to 10 DTE
         available_expiries = self.alpaca_client.enumerate_mon_wed_fri_expiries(
-            symbol, min_dte=1, max_dte=10, reference_date=ref_date
+            symbol, min_dte=0, max_dte=10, reference_date=ref_date
         )
 
         valid_expiry = None
