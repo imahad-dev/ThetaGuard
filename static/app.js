@@ -207,7 +207,7 @@ async function updateDashboard() {
         <td>${new Date(ev.release_time).toLocaleString("en-US", { timeZone: "America/New_York" })} ET</td>
         <td>${new Date(ev.lockout_start).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit" })} -> ${new Date(ev.lockout_end).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "2-digit", minute: "2-digit" })} ET</td>
         <td>${ev.hours_until_release > 0 ? ev.hours_until_release + " hrs" : "Released"}</td>
-        <td><span class="${ev.is_active ? 'badge badge-lockout' : 'badge badge-clear'}">${ev.is_active ? 'LOCKOUT ACTIVE' : 'UPCOMING'}</span></td>
+        <td><span class="${ev.is_active ? 'badge badge-lockout' : (new Date(ev.release_time) < new Date() ? 'badge badge-past' : 'badge badge-clear')}">${ev.is_active ? 'LOCKOUT ACTIVE' : (new Date(ev.release_time) < new Date() ? 'CLEARED' : 'UPCOMING')}</span></td>
       </tr>
     `).join("");
   } else {
